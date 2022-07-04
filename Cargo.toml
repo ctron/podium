@@ -1,15 +1,22 @@
 [package]
-name = "poddy"
+name = "poddy-cli"
 version = "0.1.0"
 description = "Your friendly pod buddy"
 
 repository = "https://github.com/ctron/poddy"
-categories = ["api-bindings"]
-keywords = ["Kubernetes"]
+categories = ["command-line-interface", "visualization"]
+keywords = ["Kubernetes", "Pods", "Watch"]
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
+
+[lib]
+name = "poddy"
+
+[[bin]]
+name = "poddy"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"

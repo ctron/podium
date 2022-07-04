@@ -1,11 +1,11 @@
-# Poddy - your pod buddy
+# poddy - your pod buddy
 
 > Watch your pods!
 
 ## Install
 
 ```shell
-cargo install poddy
+cargo install poddy-cli
 ```
 
 ## Run
