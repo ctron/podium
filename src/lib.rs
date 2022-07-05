@@ -1,5 +1,6 @@
 pub mod app;
 pub mod input;
+pub mod k8s;
 
 mod client;
 

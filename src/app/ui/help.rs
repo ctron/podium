@@ -23,12 +23,16 @@ where
    h   View this help   
    l   Toggle log view
 
-   d   View deployments (not working yet)
+   d   View deployments
    p   View pods
 
    ## Pods
    
    k   Kill selected pod
+   
+   ## Deployments
+   
+   r   Restart deployment
 
 "#,
     ));

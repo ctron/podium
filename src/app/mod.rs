@@ -1,4 +1,5 @@
-use crate::app::state::{AppState, Pods};
+use crate::app::state::list::ListWatcher;
+use crate::app::state::AppState;
 use crate::client::Client;
 use crate::input::key::Key;
 use crate::Args;
@@ -37,7 +38,7 @@ impl App {
     pub fn new(args: Args) -> Self {
         let client = Client::new(args.clone());
         Self {
-            state: AppState::Pods(Pods::new(client.clone())),
+            state: AppState::Pods(ListWatcher::new(client.clone())),
             client,
             args,
             global: Default::default(),
@@ -57,8 +58,10 @@ impl App {
                     return AppReturn::Exit;
                 }
             }
-            Key::Char('d') => self.state = AppState::Deployments,
-            Key::Char('p') => self.state = AppState::Pods(Pods::new(self.client.clone())),
+            Key::Char('d') => {
+                self.state = AppState::Deployments(ListWatcher::new(self.client.clone()))
+            }
+            Key::Char('p') => self.state = AppState::Pods(ListWatcher::new(self.client.clone())),
             Key::Char('l') => self.global.logs = !self.global.logs,
             Key::Char('h') | Key::Char('?') => self.global.help = !self.global.help,
             _ => {
