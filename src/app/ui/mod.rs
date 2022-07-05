@@ -1,16 +1,13 @@
+pub mod help;
 pub mod overlay;
 pub mod state;
 
-use crate::{App, Args};
-use tui::layout::Rect;
-use tui::style::Modifier;
-use tui::text::{Span, Spans, Text};
-use tui::widgets::{StatefulWidget, Widget};
+use crate::{ui::help::draw_help, App, Args};
 use tui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
     Frame,
 };
 use tui_logger::TuiLoggerWidget;
@@ -134,36 +131,4 @@ fn draw_logs<'a>() -> TuiLoggerWidget<'a> {
                 .borders(Borders::ALL),
         )
         .style(Style::default().fg(Color::White).bg(Color::Black))
-}
-
-pub fn draw_help<B>(rect: &mut Frame<B>)
-where
-    B: Backend,
-{
-    let mut text = Text::from("\n");
-    text.extend(Text::from(Spans::from(vec![
-        Span::styled(" Poddy", Style::default().add_modifier(Modifier::BOLD)),
-        Span::from(" - "),
-        Span::styled(
-            "watch your pods",
-            Style::default().add_modifier(Modifier::ITALIC),
-        ),
-    ])));
-
-    text.extend(Text::from(
-        r#"
- Keys:
-   <Esc>   Exit the current view (or the application)
-   q, <Ctrl> + c   Exit the application
-
-   h   View this help   
-   l   Toggle log view
-
-   d   View deployments (not working yet)
-   p   View pods
-
-"#,
-    ));
-    let help = Paragraph::new(text).block(Block::default().title("Help").borders(Borders::ALL));
-    rect.render_widget(help, rect.size());
 }
