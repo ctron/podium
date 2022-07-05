@@ -7,7 +7,8 @@ use crate::{
     input::key::Key,
     ui::{state::Paging, StateRenderer},
 };
-use futures::Stream;
+use anyhow::anyhow;
+use futures::{Stream, StreamExt};
 use k8s_openapi::{api::core::v1::Pod, serde::de::DeserializeOwned};
 use kube::{
     api::{DeleteParams, ListParams, Preconditions},
@@ -17,19 +18,19 @@ use kube::{
     },
     Api, Resource, ResourceExt,
 };
+use log::log_enabled;
 use std::{
     convert::Infallible,
     fmt::Debug,
     hash::Hash,
     ops::Deref,
+    pin::Pin,
     sync::{Arc, Mutex},
-    time::Duration,
 };
 use tokio::{
     spawn,
     sync::mpsc::{channel, Receiver, Sender},
     task::JoinHandle,
-    time::{interval, MissedTickBehavior},
 };
 use tui::{layout::*, style::*, text::*, widgets::*};
 
@@ -40,7 +41,7 @@ pub struct Pods {
 
 pub enum State {
     Loading,
-    List(Reflector<Pod>, TableState),
+    List(Store<Pod>, TableState),
     Error(anyhow::Error),
 }
 
@@ -224,34 +225,53 @@ impl Context {
 
 impl Runner {
     async fn run(mut self) {
-        let mut interval = interval(Duration::from_secs(2));
-        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
         let client = self.client.clone();
         let ctx = self.ctx.clone();
 
         let reflector = async {
-            loop {
-                interval.tick().await;
-                log::debug!("Refreshing reflector");
+            let mut reflector: Option<Result<Reflector<Pod>, anyhow::Error>> = None;
 
-                let create = {
-                    match *ctx.state.lock().unwrap() {
-                        State::Loading | State::Error(_) => true,
-                        State::List(_, _) => {
-                            // check?
-                            false
-                        }
+            'outer: loop {
+                match reflector {
+                    None => {
+                        *ctx.state.lock().unwrap() = State::Loading;
+                        // Create
+                        reflector = Some(Reflector::new(&client).await);
                     }
-                };
-
-                if create {
-                    let state = match Reflector::new(&client).await {
-                        Ok(reflector) => State::List(reflector, Default::default()),
-                        Err(err) => State::Error(err),
-                    };
-
-                    *ctx.state.lock().unwrap() = state;
+                    Some(Err(err)) => {
+                        // set error
+                        {
+                            *ctx.state.lock().unwrap() = State::Error(anyhow!(err));
+                        }
+                        // create
+                        let r = Reflector::new(&client).await;
+                        log::warn!("Created new reflector - ok: {}", r.is_ok());
+                        reflector = Some(r);
+                    }
+                    Some(Ok(mut r)) => {
+                        // set store
+                        {
+                            *ctx.state.lock().unwrap() =
+                                State::List(r.reader.clone(), Default::default());
+                        }
+                        // run
+                        while let Some(evt) = r.stream.next().await {
+                            if log_enabled!(log::Level::Info) {
+                                let m = format!("{evt:?}");
+                                log::info!("{}", &m[0..90]);
+                            }
+                            match evt {
+                                Ok(_) => {}
+                                Err(err) => {
+                                    log::warn!("Watch error: {err}");
+                                    reflector = Some(Err(anyhow!(err)));
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                        log::warn!("Stream closed");
+                        reflector = Some(Err(anyhow!("Stream closed")));
+                    }
                 }
             }
         };
@@ -268,7 +288,8 @@ impl Runner {
     }
 
     async fn execute_kill(&self, pod: &Pod) {
-        self.client
+        let result = self
+            .client
             .run(|context| async move {
                 if let Some(namespace) = pod.namespace() {
                     let pods: Api<Pod> = Api::namespaced(context.client, &namespace);
@@ -284,8 +305,16 @@ impl Runner {
                 }
                 Ok::<_, anyhow::Error>(())
             })
-            .await
-            .ok();
+            .await;
+
+        match result {
+            Ok(_) => {
+                log::info!("Pod killed");
+            }
+            Err(err) => {
+                log::warn!("Failed to kill pod: {err}");
+            }
+        }
     }
 }
 
@@ -295,7 +324,7 @@ where
     K::DynamicType: Hash + Eq,
 {
     reader: Store<K>,
-    _stream: Box<dyn Stream<Item = watcher::Result<watcher::Event<K>>> + Send>,
+    stream: Pin<Box<dyn Stream<Item = watcher::Result<watcher::Event<K>>> + Send>>,
 }
 
 impl<K> Reflector<K>
@@ -310,11 +339,8 @@ where
                 async {
                     let (reader, writer) = reflector::store();
                     let lp = ListParams::default();
-                    let stream = Box::new(reflector(writer, watcher(pods, lp)));
-                    Ok::<_, Infallible>(Reflector {
-                        reader,
-                        _stream: stream,
-                    })
+                    let stream = Box::pin(reflector(writer, watcher(pods, lp)));
+                    Ok::<_, Infallible>(Reflector { reader, stream })
                 }
             })
             .await?)

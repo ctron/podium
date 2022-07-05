@@ -10,7 +10,7 @@ use tui::{
     widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
     Frame,
 };
-use tui_logger::TuiLoggerWidget;
+use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
 pub trait StateRenderer {
     fn rect(&self) -> Rect;
@@ -72,10 +72,10 @@ where
     // TODO check size
 
     let logs = app.global().logs;
-    let mut constraints = vec![Constraint::Length(3), Constraint::Min(1)];
+    let mut constraints = vec![Constraint::Length(3), Constraint::Percentage(60)];
 
     if logs {
-        constraints.push(Constraint::Length(6));
+        constraints.push(Constraint::Percentage(40));
     }
 
     // Vertical layout
@@ -119,6 +119,7 @@ fn draw_title<'a>(args: &Args) -> Paragraph<'a> {
 fn draw_logs<'a>() -> TuiLoggerWidget<'a> {
     TuiLoggerWidget::default()
         .output_timestamp(Some("%H:%M:%S%.3f".into()))
+        .output_level(Some(TuiLoggerLevelOutput::Abbreviated))
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Green))
         .style_warn(Style::default().fg(Color::Yellow))
