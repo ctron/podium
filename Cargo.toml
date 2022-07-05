@@ -20,12 +20,13 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
+chrono = "0.4"
 clap = { version = "3", features = ["derive", "cargo", "unicode", "wrap_help", "env"] }
 crossterm = "0.23"
-chrono = "0.4"
+futures = "0.3"
 humantime = "2"
 k8s-openapi = { version = "0.15", features = ["v1_22"] }
-kube = "0.73"
+kube = { version = "0.73", features = ["runtime"] }
 log = "0.4"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }

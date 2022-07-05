@@ -7,12 +7,21 @@ use crate::{
     input::key::Key,
     ui::{state::Paging, StateRenderer},
 };
-use k8s_openapi::api::core::v1::Pod;
+use futures::Stream;
+use k8s_openapi::{api::core::v1::Pod, serde::de::DeserializeOwned};
 use kube::{
     api::{DeleteParams, ListParams, Preconditions},
+    runtime::{
+        reflector::{self, reflector, Store},
+        watcher,
+    },
     Api, Resource, ResourceExt,
 };
 use std::{
+    convert::Infallible,
+    fmt::Debug,
+    hash::Hash,
+    ops::Deref,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -29,10 +38,9 @@ pub struct Pods {
     ctx: Context,
 }
 
-#[derive(Debug)]
 pub enum State {
     Loading,
-    List(Vec<Pod>, TableState),
+    List(Reflector<Pod>, TableState),
     Error(anyhow::Error),
 }
 
@@ -50,7 +58,7 @@ struct Runner {
 
 #[derive(Debug)]
 enum Msg {
-    KillPod(Box<Pod>),
+    KillPod(Arc<Pod>),
 }
 
 impl Pods {
@@ -89,23 +97,26 @@ impl Pods {
 impl Context {
     pub async fn on_key(&self, key: Key) {
         match &mut (*self.state.lock().unwrap()) {
-            State::List(pods, state) => match key {
-                Key::Down => state.next(pods.len()),
-                Key::Up => state.prev(pods.len()),
-                Key::Char('k') => self.trigger_kill(pods, state).await,
-                _ => {}
-            },
+            State::List(pods, state) => {
+                let pods = pods.state();
+                match key {
+                    Key::Down => state.next(pods.len()),
+                    Key::Up => state.prev(pods.len()),
+                    Key::Char('k') => self.trigger_kill(pods.as_slice(), state).await,
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }
 
-    async fn trigger_kill(&self, pods: &Vec<Pod>, state: &TableState) {
-        if let Some(pod) = state.selected().and_then(|i| pods.get(i)).cloned() {
-            let _ = self.tx.try_send(Msg::KillPod(Box::new(pod)));
+    async fn trigger_kill(&self, pods: &[Arc<Pod>], state: &TableState) {
+        if let Some(pod) = state.selected().and_then(|i| pods.get(i)) {
+            let _ = self.tx.try_send(Msg::KillPod(pod.clone()));
         }
     }
 
-    fn render_table(pods: &[Pod]) -> (Table, bool) {
+    fn render_table(pods: &[Arc<Pod>]) -> (Table, bool) {
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default();
         let header_cells = ["Name", "Ready", "State", "Restarts", "Age"]
@@ -143,7 +154,8 @@ impl Context {
                 r.render(table);
             }
             State::List(ref pods, ref mut state) => {
-                let (table, empty) = Self::render_table(pods);
+                let pods = pods.state();
+                let (table, empty) = Self::render_table(&pods);
 
                 if state.selected().is_none() && !empty {
                     state.select(Some(0));
@@ -218,44 +230,41 @@ impl Runner {
         let client = self.client.clone();
         let ctx = self.ctx.clone();
 
-        tokio::join!(
-            // timer task
-            async {
-                loop {
-                    interval.tick().await;
-                    log::debug!("Refreshing pods");
-                    let result = client
-                        .run(|context| {
-                            let pods: Api<Pod> = context.api_namespaced();
+        let reflector = async {
+            loop {
+                interval.tick().await;
+                log::debug!("Refreshing reflector");
 
-                            async move { pods.list(&ListParams::default()).await }
-                        })
-                        .await;
-
-                    let state = match result {
-                        Ok(pods) => {
-                            // get the current state, as close to as updating as possible
-                            let current = match &*ctx.state.lock().unwrap() {
-                                State::List(_, state) => Some(state.clone()),
-                                _ => None,
-                            };
-                            State::List(pods.items, current.unwrap_or_default())
+                let create = {
+                    match *ctx.state.lock().unwrap() {
+                        State::Loading | State::Error(_) => true,
+                        State::List(_, _) => {
+                            // check?
+                            false
                         }
-                        Err(err) => State::Error(err.into()),
+                    }
+                };
+
+                if create {
+                    let state = match Reflector::new(&client).await {
+                        Ok(reflector) => State::List(reflector, Default::default()),
+                        Err(err) => State::Error(err),
                     };
 
                     *ctx.state.lock().unwrap() = state;
                 }
-            },
-            // receiver loop
-            async {
-                while let Some(msg) = self.rx.recv().await {
-                    match msg {
-                        Msg::KillPod(pod) => self.execute_kill(&pod).await,
-                    }
+            }
+        };
+
+        let receiver = async {
+            while let Some(msg) = self.rx.recv().await {
+                match msg {
+                    Msg::KillPod(pod) => self.execute_kill(&pod).await,
                 }
             }
-        );
+        };
+
+        futures::future::select(Box::pin(reflector), Box::pin(receiver)).await;
     }
 
     async fn execute_kill(&self, pod: &Pod) {
@@ -277,5 +286,49 @@ impl Runner {
             })
             .await
             .ok();
+    }
+}
+
+pub struct Reflector<K>
+where
+    K: Resource + 'static,
+    K::DynamicType: Hash + Eq,
+{
+    reader: Store<K>,
+    _stream: Box<dyn Stream<Item = watcher::Result<watcher::Event<K>>> + Send>,
+}
+
+impl<K> Reflector<K>
+where
+    K: Resource + Debug + Send + Sync + DeserializeOwned + Clone + 'static,
+    K::DynamicType: Clone + Default + Hash + Eq,
+{
+    pub async fn new(client: &Client) -> anyhow::Result<Reflector<K>> {
+        Ok(client
+            .run(|context| {
+                let pods: Api<K> = context.api_namespaced();
+                async {
+                    let (reader, writer) = reflector::store();
+                    let lp = ListParams::default();
+                    let stream = Box::new(reflector(writer, watcher(pods, lp)));
+                    Ok::<_, Infallible>(Reflector {
+                        reader,
+                        _stream: stream,
+                    })
+                }
+            })
+            .await?)
+    }
+}
+
+impl<K> Deref for Reflector<K>
+where
+    K: Resource + Debug + Send + DeserializeOwned + Clone + 'static,
+    K::DynamicType: Clone + Default + Hash + Eq,
+{
+    type Target = Store<K>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.reader
     }
 }
