@@ -1,6 +1,6 @@
 [package]
 name = "poddy-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Your friendly pod buddy"
 
 repository = "https://github.com/ctron/poddy"
