@@ -32,7 +32,7 @@ where
    
    ## Deployments
    
-   r   Restart deployment
+   r   Restart selected deployment
 
 "#,
     ));
