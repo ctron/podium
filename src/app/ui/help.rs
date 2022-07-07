@@ -22,6 +22,8 @@ where
 
    h   View this help   
    l   Toggle log view
+   left, right
+       Cycle through views
 
    d   View deployments
    p   View pods
