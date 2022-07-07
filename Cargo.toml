@@ -1,22 +1,15 @@
 [package]
-name = "poddy-cli"
+name = "podwatch"
 version = "0.1.3"
 description = "Your friendly pod buddy"
 
-repository = "https://github.com/ctron/poddy"
+repository = "https://github.com/ctron/podwatch"
 categories = ["command-line-interface", "visualization"]
 keywords = ["Kubernetes", "Pods", "Watch"]
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
-
-[lib]
-name = "poddy"
-
-[[bin]]
-name = "poddy"
-path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"

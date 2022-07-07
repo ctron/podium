@@ -1,19 +1,19 @@
 # poddy - your pod buddy
 
-[![Crates.io](https://img.shields.io/crates/v/poddy-cli)](https://crates.io/crates/poddy-cli)
+[![Crates.io](https://img.shields.io/crates/v/podwatch)](https://crates.io/crates/podwatch)
 
 > Watch your pods!
 
 ## Install
 
 ```shell
-cargo install poddy-cli
+cargo install podwatch
 ```
 
 ## Run
 
 ```shell
-poddy -n <namespace>
+podwatch -n <namespace>
 ```
 
 ## Screenshot
