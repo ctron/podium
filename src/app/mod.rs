@@ -64,6 +64,8 @@ impl App {
             Key::Char('p') => self.state = AppState::Pods(ListWatcher::new(self.client.clone())),
             Key::Char('l') => self.global.logs = !self.global.logs,
             Key::Char('h') | Key::Char('?') => self.global.help = !self.global.help,
+            Key::Left => self.prev(),
+            Key::Right => self.next(),
             _ => {
                 self.state.on_key(key).await;
             }
@@ -77,5 +79,21 @@ impl App {
 
     pub fn global(&self) -> &Global {
         &self.global
+    }
+
+    pub fn prev(&mut self) {
+        self.state = match &self.state {
+            AppState::Initializing => AppState::Initializing,
+            AppState::Pods(_) => AppState::Deployments(ListWatcher::new(self.client.clone())),
+            AppState::Deployments(_) => AppState::Pods(ListWatcher::new(self.client.clone())),
+        }
+    }
+
+    pub fn next(&mut self) {
+        self.state = match &self.state {
+            AppState::Initializing => AppState::Initializing,
+            AppState::Pods(_) => AppState::Deployments(ListWatcher::new(self.client.clone())),
+            AppState::Deployments(_) => AppState::Pods(ListWatcher::new(self.client.clone())),
+        }
     }
 }

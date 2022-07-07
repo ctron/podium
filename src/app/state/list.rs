@@ -231,6 +231,8 @@ where
                         log::warn!("Created new reflector - ok: {}", r.is_ok());
                         reflector = Some(r);
                     }
+                    // FIXME: need to deal with the case that we could create a watcher, but it
+                    // right away fails. Which results in a red blinking display.
                     Some(Ok(mut r)) => {
                         // set store
                         {

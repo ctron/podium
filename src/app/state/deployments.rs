@@ -42,7 +42,7 @@ impl ListResource for Deployments {
 
         Table::new(rows)
             .header(header)
-            .block(Block::default().borders(Borders::ALL).title("Pods"))
+            .block(Block::default().borders(Borders::ALL).title("Deployments"))
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
