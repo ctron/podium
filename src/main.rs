@@ -1,6 +1,6 @@
 use clap::Parser;
 use log::LevelFilter;
-use podwatch::{app::App, start_ui, Args};
+use podium::{app::App, start_ui, Args};
 use std::sync::Arc;
 
 #[tokio::main]
