@@ -1,19 +1,19 @@
-# poddy - your pod buddy
+# podium - watch your pods
 
-[![Crates.io](https://img.shields.io/crates/v/podwatch)](https://crates.io/crates/podwatch)
+[![Crates.io](https://img.shields.io/crates/v/podium)](https://crates.io/crates/podium)
 
 > Watch your pods!
 
 ## Install
 
 ```shell
-cargo install podwatch
+cargo install podium
 ```
 
 ## Run
 
 ```shell
-podwatch -n <namespace>
+podium -n <namespace>
 ```
 
 ## Screenshot
