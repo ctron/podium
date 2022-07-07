@@ -1,9 +1,11 @@
 mod reflector;
+mod scale;
 
 use chrono::Utc;
 use humantime::format_duration;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 pub use reflector::*;
+pub use scale::*;
 
 pub fn ago(time: &Time) -> Option<String> {
     let mut age: chrono::Duration = Utc::now() - time.0;

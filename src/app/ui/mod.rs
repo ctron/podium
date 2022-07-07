@@ -1,5 +1,4 @@
 pub mod help;
-pub mod overlay;
 pub mod state;
 
 use crate::{ui::help::draw_help, App, Args};

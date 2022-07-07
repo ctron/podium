@@ -1,7 +1,7 @@
 use crate::app::state::list::ListResource;
 use crate::client::Client;
 use crate::input::key::Key;
-use crate::k8s::ago;
+use crate::k8s::{ago, Scale};
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::{Api, Resource, ResourceExt};
 use std::future::Future;
@@ -12,6 +12,8 @@ use tui::{layout::*, style::*, widgets::*};
 
 pub enum Msg {
     Restart(Arc<Deployment>),
+    ScaleUp(Arc<Deployment>),
+    ScaleDown(Arc<Deployment>),
 }
 
 pub struct Deployments;
@@ -56,7 +58,9 @@ impl ListResource for Deployments {
         <<Self as ListResource>::Resource as Resource>::DynamicType: Hash + Eq,
     {
         match key {
-            Key::Char('r') => Self::trigger_restart(items, state),
+            Key::Char('r') => Self::with_selection(items, state, Msg::Restart),
+            Key::Char('+') => Self::with_selection(items, state, Msg::ScaleUp),
+            Key::Char('-') => Self::with_selection(items, state, Msg::ScaleDown),
             _ => None,
         }
     }
@@ -70,39 +74,53 @@ impl ListResource for Deployments {
                 Msg::Restart(deployment) => {
                     Self::restart(client, &deployment).await;
                 }
+                Msg::ScaleUp(deployment) => {
+                    Self::scale(client, &deployment, 1).await;
+                }
+                Msg::ScaleDown(deployment) => {
+                    Self::scale(client, &deployment, -1).await;
+                }
             }
         })
     }
 }
 
 impl Deployments {
-    fn trigger_restart(deployments: &[Arc<Deployment>], state: &TableState) -> Option<Msg> {
+    fn with_selection<F, I>(
+        deployments: &[Arc<Deployment>],
+        state: &TableState,
+        f: F,
+    ) -> Option<Msg>
+    where
+        F: FnOnce(Arc<Deployment>) -> I,
+        I: Into<Option<Msg>>,
+    {
         let mut deployments = deployments.to_vec();
         deployments.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
 
         if let Some(deployment) = state.selected().and_then(|i| deployments.get(i)) {
-            Some(Msg::Restart(deployment.clone()))
+            f(deployment.clone()).into()
         } else {
             None
         }
     }
 
     fn make_row<'r, 'a>(deployment: &'r Deployment) -> Row<'a> {
-        let style = Style::default();
+        let mut style = Style::default();
 
         let name = deployment.name();
+
         let (ready, updated, available) = deployment
             .status
             .as_ref()
             .map(|s| {
                 (
-                    format!(
-                        "{}/{}",
+                    (
                         s.ready_replicas.unwrap_or_default(),
-                        s.replicas.unwrap_or_default()
+                        s.replicas.unwrap_or_default(),
                     ),
-                    s.updated_replicas.unwrap_or_default().to_string(),
-                    s.available_replicas.unwrap_or_default().to_string(),
+                    s.updated_replicas.unwrap_or_default(),
+                    s.available_replicas.unwrap_or_default(),
                 )
             })
             .unwrap_or_default();
@@ -113,7 +131,20 @@ impl Deployments {
             .and_then(ago)
             .unwrap_or_default();
 
-        Row::new(vec![name, ready, updated, available, age]).style(style)
+        if ready.0 == 0 {
+            style.fg = Some(Color::Red);
+        } else if ready.0 < ready.1 {
+            style.fg = Some(Color::Yellow);
+        }
+
+        Row::new(vec![
+            name,
+            format!("{}/{}", ready.0, ready.1),
+            updated.to_string(),
+            available.to_string(),
+            age,
+        ])
+        .style(style)
     }
 
     async fn restart(client: Arc<Client>, deployment: &Deployment) {
@@ -121,6 +152,28 @@ impl Deployments {
             .run(|ctx| {
                 let api: Api<Deployment> = ctx.api_namespaced();
                 async move { api.restart(&deployment.name()).await }
+            })
+            .await;
+    }
+
+    async fn scale(client: Arc<Client>, deployment: &Deployment, amount: i32) {
+        let _ = client
+            .run(|ctx| {
+                let api: Api<Deployment> = ctx.api_namespaced();
+                async move {
+                    let current: i32 = deployment
+                        .spec
+                        .as_ref()
+                        .and_then(|s| s.replicas)
+                        .unwrap_or_default();
+
+                    let replicas = current.saturating_add(amount);
+                    if replicas != current {
+                        api.replicas(&deployment.name(), replicas).await.map(|_| ())
+                    } else {
+                        Ok(())
+                    }
+                }
             })
             .await;
     }

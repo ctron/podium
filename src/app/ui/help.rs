@@ -32,7 +32,8 @@ where
    
    ## Deployments
    
-   r   Restart selected deployment
+   r     Restart selected deployment
+   +, -  Scale up or down
 
 "#,
     ));
