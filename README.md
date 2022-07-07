@@ -1,5 +1,7 @@
 # poddy - your pod buddy
 
+[![Crates.io](https://img.shields.io/crates/v/poddy-cli)](https://crates.io/crates/poddy-cli)
+
 > Watch your pods!
 
 ## Install
