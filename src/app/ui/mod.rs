@@ -102,7 +102,7 @@ where
 
 fn draw_title<'a>(args: &Args) -> Paragraph<'a> {
     Paragraph::new(format!(
-        "Poddy ({})",
+        "Podium ({})",
         args.namespace.as_deref().unwrap_or("<current>")
     ))
     .style(Style::default().fg(Color::White))
