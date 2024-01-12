@@ -6,7 +6,7 @@ where
 {
     let mut text = Text::from("\n");
     text.extend(Text::from(Spans::from(vec![
-        Span::styled(" Poddy", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled(" Podium", Style::default().add_modifier(Modifier::BOLD)),
         Span::from(" - "),
         Span::styled(
             "watch your pods",
