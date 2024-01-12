@@ -188,8 +188,10 @@ where
             State::List(items, state) => {
                 let items = items.state();
                 match key {
-                    Key::Down => state.next(items.len()),
-                    Key::Up => state.prev(items.len()),
+                    Key::Down => state.next(items.len(), 1),
+                    Key::Up => state.prev(items.len(), 1),
+                    Key::PageDown => state.next(items.len(), 20),
+                    Key::PageUp => state.prev(items.len(), 20),
                     _ => {
                         if let Some(msg) = R::on_key(items.as_slice(), state, key) {
                             let _ = self.tx.try_send(msg);
