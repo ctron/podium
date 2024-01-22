@@ -22,6 +22,9 @@ pub struct Args {
     /// Namespace
     #[clap(short, long, value_parser)]
     pub namespace: Option<String>,
+    /// Context
+    #[clap(short, long, value_parser)]
+    pub context: Option<String>,
     /// Verbose
     #[clap(short, long, action = clap::ArgAction::Count)]
     pub verbose: u8,

@@ -1,11 +1,16 @@
 use crate::Args;
-use kube::{Api, Resource};
+use kube::{
+    config::{KubeConfigOptions, KubeconfigError},
+    Api, Resource,
+};
 use std::future::Future;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RunError<E> {
+    #[error("Failed to evaluate configuration: {0}")]
+    Config(#[from] KubeconfigError),
     #[error("Failed to create client: {0}")]
-    Kube(#[source] kube::Error),
+    Kube(#[from] kube::Error),
     #[error("Failed to create client: {0}")]
     Operation(#[source] E),
 }
@@ -27,7 +32,12 @@ impl Client {
     {
         // right now, we just create a new client every time. later on, we should cache
         // and invalidate the cache when an operation fails
-        let client = kube::Client::try_default().await.map_err(RunError::Kube)?;
+        let config = kube::Config::from_kubeconfig(&KubeConfigOptions {
+            context: self.args.context.clone(),
+            ..Default::default()
+        })
+        .await?;
+        let client = kube::Client::try_from(config)?;
 
         let context = Context {
             client,
