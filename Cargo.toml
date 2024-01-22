@@ -3,7 +3,7 @@ name = "podium"
 version = "0.1.4"
 description = "Your friendly pod buddy"
 
-repository = "https://github.com/ctron/podwatch"
+repository = "https://github.com/ctron/podium"
 categories = ["command-line-interface", "visualization"]
 keywords = ["Kubernetes", "Pods", "Watch"]
 authors = ["Jens Reimann <jreimann@redhat.com>"]
