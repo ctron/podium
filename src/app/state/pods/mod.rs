@@ -9,8 +9,8 @@ use kube::{
     api::{DeleteParams, Preconditions},
     Api, Resource, ResourceExt,
 };
+use ratatui::{layout::*, style::*, widgets::*};
 use std::{fmt::Debug, future::Future, hash::Hash, pin::Pin, sync::Arc};
-use tui::{layout::*, style::*, widgets::*};
 
 impl ListResource for Pod {
     type Resource = Self;
@@ -31,18 +31,20 @@ impl ListResource for Pod {
 
         let rows: Vec<Row> = items.iter().map(|pod| make_row(pod)).collect();
 
-        Table::new(rows)
-            .header(header)
-            .block(Block::default().borders(Borders::ALL).title("Pods"))
-            .highlight_style(selected_style)
-            .highlight_symbol(">> ")
-            .widths(&[
+        Table::new(
+            rows,
+            [
                 Constraint::Min(64),
                 Constraint::Min(10),
                 Constraint::Min(20),
                 Constraint::Min(15),
                 Constraint::Min(10),
-            ])
+            ],
+        )
+        .header(header)
+        .block(Block::default().borders(Borders::ALL).title("Pods"))
+        .highlight_style(selected_style)
+        .highlight_symbol(">> ")
     }
 
     fn on_key(items: &[Arc<Self::Resource>], state: &TableState, key: Key) -> Option<Self::Message>

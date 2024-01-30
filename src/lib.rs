@@ -9,11 +9,11 @@ use crate::input::events::Events;
 use crate::input::InputEvent;
 use app::App;
 use clap::Parser;
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 use std::io::stdout;
 use std::sync::Arc;
 use std::time::Duration;
-use tui::backend::CrosstermBackend;
-use tui::Terminal;
 
 /// Watch pods
 #[derive(Parser, Debug, Clone)]

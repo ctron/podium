@@ -1,5 +1,5 @@
+use ratatui::widgets::TableState;
 use std::cmp::max;
-use tui::widgets::TableState;
 
 pub trait Paging {
     fn next(&mut self, total: usize, increment: usize);

@@ -2,8 +2,7 @@ pub mod help;
 pub mod state;
 
 use crate::{ui::help::draw_help, App, Args};
-use tui::{
-    backend::Backend,
+use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph, StatefulWidget, Widget},
@@ -26,10 +25,7 @@ pub trait StateRenderer {
     }
 }
 
-impl<'c, 'f, B> StateRenderer for RenderContext<'c, 'f, B>
-where
-    B: Backend,
-{
+impl<'c, 'f> StateRenderer for RenderContext<'c, 'f> {
     #[inline]
     fn rect(&self) -> Rect {
         self.rect
@@ -44,18 +40,12 @@ where
     }
 }
 
-struct RenderContext<'c, 'f, B>
-where
-    B: Backend + 'f,
-{
-    frame: &'c mut Frame<'f, B>,
+struct RenderContext<'c, 'f> {
+    frame: &'c mut Frame<'f>,
     rect: Rect,
 }
 
-pub fn draw<B>(rect: &mut Frame<B>, app: &App)
-where
-    B: Backend,
-{
+pub fn draw(rect: &mut Frame, app: &App) {
     if app.global.help {
         draw_help(rect)
     } else {
@@ -63,10 +53,7 @@ where
     }
 }
 
-pub fn draw_default<B>(rect: &mut Frame<B>, app: &App)
-where
-    B: Backend,
-{
+pub fn draw_default(rect: &mut Frame, app: &App) {
     let size = rect.size();
     // TODO check size
 

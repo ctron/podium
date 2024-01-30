@@ -10,6 +10,7 @@ use k8s_openapi::serde::de::DeserializeOwned;
 use k8s_openapi::NamespaceResourceScope;
 use kube::runtime::reflector::Store;
 use log::log_enabled;
+use ratatui::{style::*, text::*, widgets::*};
 use std::{
     fmt::Debug,
     future::Future,
@@ -22,7 +23,6 @@ use tokio::{
     sync::mpsc::{channel, Receiver, Sender},
     task::JoinHandle,
 };
-use tui::{style::*, text::*, widgets::*};
 
 pub trait ListResource: Sized {
     type Resource: kube::Resource<Scope = NamespaceResourceScope>

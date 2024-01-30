@@ -1,11 +1,8 @@
-use tui::{backend::Backend, style::*, text::*, widgets::*, Frame};
+use ratatui::{style::*, text::*, widgets::*, Frame};
 
-pub fn draw_help<B>(rect: &mut Frame<B>)
-where
-    B: Backend,
-{
+pub fn draw_help(rect: &mut Frame) {
     let mut text = Text::from("\n");
-    text.extend(Text::from(Spans::from(vec![
+    text.extend(Text::from(Line::from(vec![
         Span::styled(" Podium", Style::default().add_modifier(Modifier::BOLD)),
         Span::from(" - "),
         Span::styled(

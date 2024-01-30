@@ -4,11 +4,11 @@ use crate::input::key::Key;
 use crate::k8s::{ago, Scale};
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::{Api, Resource, ResourceExt};
+use ratatui::{layout::*, style::*, widgets::*};
 use std::future::Future;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
-use tui::{layout::*, style::*, widgets::*};
 
 pub enum Msg {
     Restart(Arc<Deployment>),
@@ -40,17 +40,19 @@ impl ListResource for Deployments {
             .map(|deployment| Self::make_row(deployment))
             .collect();
 
-        Table::new(rows)
-            .header(header)
-            .block(Block::default().borders(Borders::ALL).title("Deployments"))
-            .highlight_style(selected_style)
-            .highlight_symbol(">> ")
-            .widths(&[
+        Table::new(
+            rows,
+            [
                 Constraint::Min(64),
                 Constraint::Min(15),
                 Constraint::Min(10),
                 Constraint::Min(10),
-            ])
+            ],
+        )
+        .header(header)
+        .block(Block::default().borders(Borders::ALL).title("Deployments"))
+        .highlight_style(selected_style)
+        .highlight_symbol(">> ")
     }
 
     fn on_key(items: &[Arc<Self::Resource>], state: &TableState, key: Key) -> Option<Self::Message>
