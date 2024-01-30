@@ -20,7 +20,7 @@ impl ListResource for Pod {
     where
         <<Self as ListResource>::Resource as Resource>::DynamicType: Hash + Eq,
     {
-        items.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+        items.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default();
@@ -69,7 +69,7 @@ impl ListResource for Pod {
 
 fn trigger_kill(pods: &[Arc<Pod>], state: &TableState) -> Option<Msg> {
     let mut pods = pods.to_vec();
-    pods.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+    pods.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
 
     if let Some(pod) = state.selected().and_then(|i| pods.get(i)) {
         Some(Msg::KillPod(pod.clone()))
@@ -81,7 +81,7 @@ fn trigger_kill(pods: &[Arc<Pod>], state: &TableState) -> Option<Msg> {
 fn make_row<'r, 'a>(pod: &'r Pod) -> Row<'a> {
     let mut style = Style::default();
 
-    let name = pod.name();
+    let name = pod.name_any();
     let ready = pod.status.as_ref().and_then(make_ready).unwrap_or_default();
 
     let state = if pod.meta().deletion_timestamp.is_some() {
@@ -131,7 +131,7 @@ async fn execute_kill(client: Arc<Client>, pod: &Pod) {
                 let pods: Api<Pod> = Api::namespaced(context.client, &namespace);
 
                 pods.delete(
-                    &pod.name(),
+                    &pod.name_any(),
                     &DeleteParams::default().preconditions(Preconditions {
                         uid: pod.uid(),
                         ..Default::default()

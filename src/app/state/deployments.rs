@@ -26,7 +26,7 @@ impl ListResource for Deployments {
     where
         <<Self as ListResource>::Resource as Resource>::DynamicType: Hash + Eq,
     {
-        items.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+        items.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default();
@@ -96,7 +96,7 @@ impl Deployments {
         I: Into<Option<Msg>>,
     {
         let mut deployments = deployments.to_vec();
-        deployments.sort_unstable_by(|a, b| a.name().cmp(&b.name()));
+        deployments.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
 
         if let Some(deployment) = state.selected().and_then(|i| deployments.get(i)) {
             f(deployment.clone()).into()
@@ -108,7 +108,7 @@ impl Deployments {
     fn make_row<'r, 'a>(deployment: &'r Deployment) -> Row<'a> {
         let mut style = Style::default();
 
-        let name = deployment.name();
+        let name = deployment.name_any();
 
         let (ready, updated, available) = deployment
             .status
@@ -151,7 +151,7 @@ impl Deployments {
         let _ = client
             .run(|ctx| {
                 let api: Api<Deployment> = ctx.api_namespaced();
-                async move { api.restart(&deployment.name()).await }
+                async move { api.restart(&deployment.name_any()).await }
             })
             .await;
     }
@@ -169,7 +169,9 @@ impl Deployments {
 
                     let replicas = current.saturating_add(amount);
                     if replicas != current {
-                        api.replicas(&deployment.name(), replicas).await.map(|_| ())
+                        api.replicas(&deployment.name_any(), replicas)
+                            .await
+                            .map(|_| ())
                     } else {
                         Ok(())
                     }

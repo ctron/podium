@@ -7,6 +7,7 @@ use crate::{
 use anyhow::anyhow;
 use futures::StreamExt;
 use k8s_openapi::serde::de::DeserializeOwned;
+use k8s_openapi::NamespaceResourceScope;
 use kube::runtime::reflector::Store;
 use log::log_enabled;
 use std::{
@@ -24,7 +25,7 @@ use tokio::{
 use tui::{style::*, text::*, widgets::*};
 
 pub trait ListResource: Sized {
-    type Resource: kube::Resource
+    type Resource: kube::Resource<Scope = NamespaceResourceScope>
         + Clone
         + Default
         + Debug

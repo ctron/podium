@@ -1,4 +1,5 @@
 use crate::Args;
+use k8s_openapi::NamespaceResourceScope;
 use kube::{
     config::{KubeConfigOptions, KubeconfigError},
     Api, Resource,
@@ -60,7 +61,7 @@ pub struct Context<'c> {
 impl Context<'_> {
     pub fn api_namespaced<K>(self) -> Api<K>
     where
-        K: Resource,
+        K: Resource<Scope = NamespaceResourceScope>,
         <K as Resource>::DynamicType: Default,
     {
         match &self.args.namespace {

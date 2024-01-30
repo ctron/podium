@@ -1,8 +1,8 @@
 use crate::client::Client;
 use futures::Stream;
 use k8s_openapi::serde::de::DeserializeOwned;
+use k8s_openapi::NamespaceResourceScope;
 use kube::{
-    api::ListParams,
     runtime::{
         reflector::{self, reflector, Store},
         watcher,
@@ -22,7 +22,13 @@ where
 
 impl<K> Reflector<K>
 where
-    K: Resource + Debug + Send + Sync + DeserializeOwned + Clone + 'static,
+    K: Resource<Scope = NamespaceResourceScope>
+        + Debug
+        + Send
+        + Sync
+        + DeserializeOwned
+        + Clone
+        + 'static,
     K::DynamicType: Clone + Default + Hash + Eq,
 {
     pub async fn new(client: &Client) -> anyhow::Result<Reflector<K>> {
@@ -31,8 +37,8 @@ where
                 let pods: Api<K> = context.api_namespaced();
                 async {
                     let (reader, writer) = reflector::store();
-                    let lp = ListParams::default();
-                    let stream = Box::pin(reflector(writer, watcher(pods, lp)));
+                    let config = Default::default();
+                    let stream = Box::pin(reflector(writer, watcher(pods, config)));
                     Ok::<_, Infallible>(Reflector { reader, stream })
                 }
             })
