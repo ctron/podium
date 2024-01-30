@@ -101,17 +101,14 @@ pub fn make_state(status: &PodStatus) -> PodState {
 pub fn make_ready(status: &PodStatus) -> Option<String> {
     if let Some(init_container_statuses) = &status.init_container_statuses {
         let total = init_container_statuses.len();
-        let ready = init_container_statuses
-            .into_iter()
-            .filter(|s| s.ready)
-            .count();
+        let ready = init_container_statuses.iter().filter(|s| s.ready).count();
         if total != ready {
             return Some(format!("Init:{ready}/{total}"));
         }
     }
     if let Some(container_statuses) = &status.container_statuses {
         let total = container_statuses.len();
-        let ready = container_statuses.into_iter().filter(|s| s.ready).count();
+        let ready = container_statuses.iter().filter(|s| s.ready).count();
         Some(format!("{ready}/{total}"))
     } else {
         None
@@ -147,17 +144,14 @@ pub fn all_containers(status: &PodStatus) -> impl Iterator<Item = &ContainerStat
     status
         .init_container_statuses
         .iter()
-        .flat_map(|c| c)
-        .chain(status.container_statuses.iter().flat_map(|c| c))
+        .flatten()
+        .chain(status.container_statuses.iter().flatten())
 }
 
 pub fn with_last_changed<'c>(
     containers: impl Iterator<Item = &'c ContainerStatus>,
 ) -> impl Iterator<Item = (Time, &'c ContainerStatus)> {
-    containers.filter_map(|c| match c.last_change() {
-        Some(time) => Some((time, c)),
-        None => None,
-    })
+    containers.filter_map(|c| c.last_change().map(|time| (time, c)))
 }
 
 /// get the last time something changed

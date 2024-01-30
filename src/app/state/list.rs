@@ -74,7 +74,7 @@ pub trait ListResource: Sized {
         }
     }
 
-    fn render_table<'r, 'a>(items: &'r mut [Arc<Self::Resource>]) -> Table<'a>
+    fn render_table<'a>(items: &mut [Arc<Self::Resource>]) -> Table<'a>
     where
         <<Self as ListResource>::Resource as kube::Resource>::DynamicType: Hash + Eq;
 

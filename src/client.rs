@@ -65,7 +65,7 @@ impl Context<'_> {
         <K as Resource>::DynamicType: Default,
     {
         match &self.args.namespace {
-            Some(namespace) => Api::namespaced(self.client, &namespace),
+            Some(namespace) => Api::namespaced(self.client, namespace),
             None => Api::default_namespaced(self.client),
         }
     }

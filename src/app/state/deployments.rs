@@ -22,11 +22,11 @@ impl ListResource for Deployments {
     type Resource = Deployment;
     type Message = Msg;
 
-    fn render_table<'r, 'a>(items: &'r mut [Arc<Self::Resource>]) -> Table<'a>
+    fn render_table<'a>(items: &mut [Arc<Self::Resource>]) -> Table<'a>
     where
         <<Self as ListResource>::Resource as Resource>::DynamicType: Hash + Eq,
     {
-        items.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
+        items.sort_unstable_by_key(|a| a.name_any());
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default();
@@ -98,7 +98,7 @@ impl Deployments {
         I: Into<Option<Msg>>,
     {
         let mut deployments = deployments.to_vec();
-        deployments.sort_unstable_by(|a, b| a.name_any().cmp(&b.name_any()));
+        deployments.sort_unstable_by_key(|a| a.name_any());
 
         if let Some(deployment) = state.selected().and_then(|i| deployments.get(i)) {
             f(deployment.clone()).into()
@@ -107,7 +107,7 @@ impl Deployments {
         }
     }
 
-    fn make_row<'r, 'a>(deployment: &'r Deployment) -> Row<'a> {
+    fn make_row<'a>(deployment: &Deployment) -> Row<'a> {
         let mut style = Style::default();
 
         let name = deployment.name_any();

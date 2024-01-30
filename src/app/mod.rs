@@ -20,18 +20,10 @@ pub struct App {
     global: Global,
 }
 
+#[derive(Default)]
 pub struct Global {
     pub logs: bool,
     pub help: bool,
-}
-
-impl Default for Global {
-    fn default() -> Self {
-        Self {
-            logs: false,
-            help: false,
-        }
-    }
 }
 
 impl App {
