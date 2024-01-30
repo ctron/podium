@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::{
     api::{Patch, PatchParams},
@@ -10,13 +9,12 @@ use std::fmt::Debug;
 
 pub trait Scalable {}
 
-#[async_trait]
 pub trait Scale {
     type Resource;
+
     async fn replicas(&self, name: &str, replicas: i32) -> Result<Self::Resource, kube::Error>;
 }
 
-#[async_trait]
 impl<S> Scale for Api<S>
 where
     S: Scalable + Clone + DeserializeOwned + Debug,

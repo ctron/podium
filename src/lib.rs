@@ -1,3 +1,5 @@
+#![allow(async_fn_in_trait)]
+
 pub mod app;
 pub mod input;
 pub mod k8s;

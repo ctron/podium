@@ -10,10 +10,10 @@ authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
+rust-version = "1.75.0"
 
 [dependencies]
 anyhow = "1"
-async-trait = "0.1"
 chrono = "0.4"
 clap = { version = "4", features = ["derive", "cargo", "unicode", "wrap_help", "env"] }
 crossterm = "0.27"
